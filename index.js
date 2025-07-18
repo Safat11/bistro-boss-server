@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 require('dotenv').config()
 const port = process.env.PORT || 5000;
 
@@ -51,9 +52,9 @@ async function run() {
             res.send(result);
         })
 
-        app.patch('users/admin/:id', async(req, res) => {
+        app.patch('/users/admin/:id', async(req, res) => {
             const id = req.params.id;
-            const filter = {_id: new ObjectId (id)}
+            const filter = {_id: new ObjectId (id)};
             const updateDoc = {
                 $set: {
                     role: 'admin'
