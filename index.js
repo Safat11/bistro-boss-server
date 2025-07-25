@@ -3,6 +3,7 @@ const app = express();
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 require('dotenv').config()
+const { ObjectId } = require('mongodb');
 const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY);
 const port = process.env.PORT || 5000;
 
@@ -27,8 +28,8 @@ const verifyJWT = (req, res, next) => {
     })
 }
 
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const { error } = require('console');
+const { MongoClient, ServerApiVersion } = require('mongodb');
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.vsndv9z.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -182,23 +183,29 @@ async function run() {
         // crate payment intent
         app.post('/create-payment-intent', verifyJWT, async (req, res) => {
             const { price } = req.body;
-            const amount = price * 100;
+            const amount = parseInt(price * 100);
+            console.log(amount, 'amount inside the intent')
+
             const paymentIntent = await stripe.paymentIntents.create({
                 amount: amount,
                 currency: 'usd',
                 payment_method_types: ['card']
-            })
+            });
+
             res.send({
                 clientSecret: paymentIntent.client_secret
             })
-        })
-
+        });
 
         // payment related api
-        app.post('/payments', verifyJWT, async(req, res) => {
+        app.post('/payments', verifyJWT, async (req, res) => {
             const payment = req.body;
-            const result = await paymentCollection.insertOne(payment);
-            res.send(result);
+            const insertResult = await paymentCollection.insertOne(payment);
+
+            const query = { _id: { $in: payment.cartItems.map(id => new ObjectId(id)) } }
+            const deleteResult = await cartCollection.deleteMany(query)
+
+            res.send({ insertResult, deleteResult });
         })
 
         // Send a ping to confirm a successful connection
