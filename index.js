@@ -249,33 +249,37 @@ async function run() {
          * 6. now get the quantity by using length: pizzas.length
          * 7. for each category use reduce to get the total amount spent on this category
         */
-        app.get('/order-stats', async (req, res) => {
+        app.get('/order-stats', verifyJWT, verifyAdmin, async (req, res) => {
             const pipeline = [
-                // Unwind the menuItems array in payments
                 { $unwind: "$menuItems" },
 
-                // Lookup corresponding menu item details
                 {
                     $lookup: {
-                        from: "menu", // The collection name for menu items
+                        from: "menu",
                         localField: "menuItems",
                         foreignField: "_id",
                         as: "menuItemDetails"
                     }
                 },
 
-                // Unwind the lookup result (should contain only one item)
                 { $unwind: "$menuItemDetails" },
 
-                // Group by category to get count and total price
                 {
                     $group: {
                         _id: "$menuItemDetails.category",
                         count: { $sum: 1 },
-                        totalPrice: { $sum: "$menuItemDetails.price" }
+                        total: { $sum: "$menuItemDetails.price" }
                     }
                 },
 
+                {
+                    $project: {
+                        _id: 0,
+                        category: "$_id",
+                        count: 1,
+                        total: { $round: ["$total", 2] } // round to 2 decimal places
+                    }
+                }
             ];
 
             const result = await paymentCollection.aggregate(pipeline).toArray()
