@@ -233,7 +233,53 @@ async function run() {
                 users,
                 products,
                 orders
-            });
+            })
+        })
+
+
+        /**
+         * ------------------------------------
+         * BANGLA SYSTEM(second best solution)
+         * ------------------------------------
+         * 1. load all payments
+         * 2. for each payment, get the menuItems array
+         * 3. for each item in the menuItems array get the menuItem from the menu collection
+         * 4. put them in an array: allOrderedItems
+         * 5. separate allOrderedItems by category using filter
+         * 6. now get the quantity by using length: pizzas.length
+         * 7. for each category use reduce to get the total amount spent on this category
+        */
+        app.get('/order-stats', async (req, res) => {
+            const pipeline = [
+                // Unwind the menuItems array in payments
+                { $unwind: "$menuItems" },
+
+                // Lookup corresponding menu item details
+                {
+                    $lookup: {
+                        from: "menu", // The collection name for menu items
+                        localField: "menuItems",
+                        foreignField: "_id",
+                        as: "menuItemDetails"
+                    }
+                },
+
+                // Unwind the lookup result (should contain only one item)
+                { $unwind: "$menuItemDetails" },
+
+                // Group by category to get count and total price
+                {
+                    $group: {
+                        _id: "$menuItemDetails.category",
+                        count: { $sum: 1 },
+                        totalPrice: { $sum: "$menuItemDetails.price" }
+                    }
+                },
+
+            ];
+
+            const result = await paymentCollection.aggregate(pipeline).toArray()
+            res.send(result);
         })
 
         // Send a ping to confirm a successful connection
