@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
 const cors = require('cors');
+// import cors from 'cors';
 const jwt = require('jsonwebtoken');
 require('dotenv').config()
 const { ObjectId } = require('mongodb');
@@ -8,7 +9,13 @@ const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY);
 const port = process.env.PORT || 5000;
 
 //middleware
-app.use(cors());
+// app.use(cors());
+app.use(
+  cors({
+    origin: [ 'https://bistro-boss-client-j976le51m-amran-hossains-projects-83f8c215.vercel.app']
+   })
+);
+
 app.use(express.json());
 
 const verifyJWT = (req, res, next) => {
